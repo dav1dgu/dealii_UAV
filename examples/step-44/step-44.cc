@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2010 - 2022 by the deal.II authors and
+ * Copyright (C) 2010 - 2020 by the deal.II authors and
  *                              & Jean-Paul Pelteret and Andrew McBride
  *
  * This file is part of the deal.II library.
@@ -1377,11 +1377,19 @@ namespace Step44
   template <int dim>
   void Solid<dim>::make_grid()
   {
-    GridGenerator::hyper_rectangle(
-      triangulation,
-      (dim == 3 ? Point<dim>(0.0, 0.0, 0.0) : Point<dim>(0.0, 0.0)),
-      (dim == 3 ? Point<dim>(1.0, 1.0, 1.0) : Point<dim>(1.0, 1.0)),
-      true);
+  //Read in mesh through gmsh
+    GridIn<dim> gridin;
+    gridin.attach_triangulation(triangulation);
+    std::ifstream f("input.msh");
+    gridin.read_msh(f);
+  //End of read in gmsh
+    //Generate mesh through GridGenerator
+  //GridGenerator::hyper_rectangle(	//original mesh created by GridGenerator
+    //  triangulation,
+    //  (dim == 3 ? Point<dim>(0.0, 0.0, 0.0) : Point<dim>(0.0, 0.0)),
+    //  (dim == 3 ? Point<dim>(1.0, 1.0, 1.0) : Point<dim>(1.0, 1.0)),
+    //  true);
+  //End of GridGenerator
     GridTools::scale(parameters.scale, triangulation);
     triangulation.refine_global(std::max(1U, parameters.global_refinement));
 
@@ -1395,22 +1403,34 @@ namespace Step44
     // used when creating the six faces of the cube domain):
     for (const auto &cell : triangulation.active_cell_iterators())
       for (const auto &face : cell->face_iterators())
-        {
-          if (face->at_boundary() == true &&
-              face->center()[1] == 1.0 * parameters.scale)
-            {
-              if (dim == 3)
-                {
-                  if (face->center()[0] < 0.5 * parameters.scale &&
-                      face->center()[2] < 0.5 * parameters.scale)
-                    face->set_boundary_id(6);
-                }
-              else
-                {
-                  if (face->center()[0] < 0.5 * parameters.scale)
-                    face->set_boundary_id(6);
-                }
-            }
+        {     
+    // set up spot of collistion with labeling the elements    
+	    if (face->at_boundary() == true)
+	      {
+		if (dim == 3)
+	          {
+	            face->set_boundary_id(0);		//set all faces with id 0 as Dirichlet BC
+	            if (face->center()[0] < 0.5*parameters.scale)
+	            face->set_boundary_id(6);		//set the selected element(s) as Neumann BC
+                  }
+	      }
+    // End set up spot of collision
+	  //if (face->at_boundary() == true &&
+          //    face->center()[1] == 1.0 * parameters.scale)
+          //  {
+          //    if (dim == 3)
+          //      {
+	  //	    face->set_boundary_id(0);		//set all faces with id 0 as Dirichlet BC
+          //        if (face->center()[0] < 0.5 * parameters.scale &&
+          //            face->center()[2] < 0.5 * parameters.scale)
+          //          face->set_boundary_id(6);		//set the selected element(s) as Neumann BC
+          //      }
+          //    else
+          //      {
+          //        if (face->center()[0] < 0.5 * parameters.scale)
+          //          face->set_boundary_id(6);
+          //      }
+          //  }
         }
   }
 
